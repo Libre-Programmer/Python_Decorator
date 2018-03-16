@@ -1,0 +1,347 @@
+
+
+ 目录 Python装饰器预备知识装饰器定义最初的函数创建一个装饰器使用装饰器如果觉得还是麻烦那就通过一个语法糖@符号来使用装饰器带参数的装饰器被多个装饰器装饰
+
+Python装饰器
+
+预备知识
+
+首先我们要知道在python,一切皆对象,函数也是一个对象
+
+    >>> def test():
+    ...     return "Hello World"
+
+有自己的id值，有type，有自己的值：
+
+    >>> id(test)
+    140155005410568
+    >>> type(test)
+    <class 'function'>
+    >>> test
+    <function test at 0x7f78614f9d08>
+
+甚至可以赋值给其他变量：
+
+    >>> test1 = test
+    >>> test1()
+    'Hello World'
+
+哪怕是当做参数传递给别的函数，也可以当做函数的返回值：
+
+    >>> def foo(func):
+    ...     print(func)
+    ...     return func
+    ... 
+    >>> test2 = foo(test)
+    <function test at 0x7f78614f9d08>
+    >>> test2()
+    'Hello World'
+
+装饰器定义
+
+	装饰器本质其实就是一个函数, 可以让其它函数不改动源代码的情况下增加其他新功能。
+
+---
+
+最初的函数
+
+    def add(x, y):
+        print(x+y)
+    add(1,2)
+
+现在我们有一个新需求, 计算代码执行时间
+
+    import time
+    
+    def add(x, y):
+        start_time = time.time
+        print(x+y)
+        stop_time = time.time
+        print("{func} spend {time} ".format(func = "add", time = stop_time-start_time))
+    
+    add(1,2)
+
+	我们当然可以这么写, 但是一来修改了源代码可能会造成一些未知的错误, 二来如果我们有一百个函数, 这样写也不现实, 这就是我们装饰器出场的时候了.
+
+创建一个装饰器
+
+    import time 
+    
+    def timmer(func):
+        """
+        :param func: 被装饰的函数
+        :return: 一个计算函数运行时间的函数
+        """
+        def wrapper(*args, **kwargs):
+            """
+            :param args:收集被装饰函数的参数
+            :param kwargs:收集被装饰函数的关键字参数
+            :return:
+            """
+            start_time = time.time()
+            time.sleep(1)   # 让进程睡一秒
+            result = func(*args, **kwargs)   # 调用被装饰的函数
+            stop_time = time.time()
+            print("{func_name} spend {time} ".format(func_name = "func", time = stop_time-start_time))
+            return result
+        return wrapper
+
+使用装饰器
+
+    def add(x, y):
+        print(x,y)
+    # 因为timmer返回的是wrapper函数对象,所以执行add()相当于执行wrapper()
+    
+    add = timmer(add)
+    add(1,2)
+
+如果觉得还是麻烦那就通过一个语法糖@符号来使用装饰器
+
+    @timmer
+    def add(x, y):
+        print(x,y)
+    
+    add(1,2)
+
+	这就是最基本的装饰器, 在不修改源代码的前提下为函数添加一个新功能, 调用时只需要在原函数上方添加一个 @deco_name ,　在这里是@timmer
+
+带参数的装饰器
+
+python还允许我们给装饰器带上函数:
+
+    import time
+    
+    def timmer(flag):
+        """
+        :param flag: 接收装饰器的参数
+        :return:
+        """
+        def outer_wrapper(func):
+            """
+            :param func: 接收被装饰的函数
+            :return:
+            """
+            # 接收被装饰函数的参数
+            def wrapper(*args, **kwargs):
+                """
+                :param args: 收集被装饰函数的参数
+                :param kwargs: 收集被装饰函数的关键字参数
+                :return:
+                """
+                if flag == "true":
+                    start_time = time.time()
+                    # 调用被装饰的函数
+                    result = func(*args, **kwargs)
+                    # 让进程睡一秒
+                    time.sleep(1)
+                    stop_time = time.time()
+                    print("{func} spend {time} ".format(func="add", time=stop_time - start_time))
+                    return result
+                else:
+                    print("Unexpected ending")
+            return wrapper
+        return outer_wrapper
+
+被多个装饰器装饰
+
+当函数被多个装饰器装饰时,从里向外装饰
+
+    @a
+    @b
+    @c
+    def func():
+        pass
+
+相当于
+
+    func = a(b(c(func)))
+
+
+
+
+
+	简言之，python装饰器就是用于拓展原来函数功能的一种函数，这个函数的特殊之处在于它的返回值也是一个函数，使用python装饰器的好处就是在不用更改原函数的代码前提下给函数增加新的功能。 
+
+一般而言，我们要想拓展原来函数代码，最直接的办法就是侵入代码里面修改，例如：
+
+    import time
+    def func():
+        print("hello")
+        time.sleep(1)
+        print("world")12345
+
+	这是我们最原始的的一个函数，然后我们试图记录下这个函数执行的总时间，那最简单的做法就是：
+
+    #原始侵入，篡改原函数
+    import time
+    def func():
+        startTime = time.time()
+        print("hello")
+        time.sleep(1)
+        print("world")
+        msecs = (endTime - startTime)*1000
+        print("time is %d ms" %msecs)
+
+	但是如果你的Boss在公司里面和你说：“小祁，这段代码是我们公司的核心代码，你不能直接去改我们的核心代码。”那该怎么办呢，我们仿照装饰器先自己试着写一下：
+
+    #避免直接侵入原函数修改，但是生效需要再次执行函数
+    import time
+    
+    def deco(func):
+        startTime = time.time()
+        func()
+        endTime = time.time()
+        msecs = (endTime - startTime)*1000
+        print("time is %d ms" %msecs)
+    
+    
+    def func():
+        print("hello")
+        time.sleep(1)
+        print("world")
+    
+    if __name__ == '__main__':
+        f = func
+        deco(f)   #只有把func()或者f()作为参数执行，新加入功能才会生效
+        print("f.__name__ is",f.__name__)    #f的name就是func()
+        print()
+
+	这里我们定义了一个函数deco，它的参数是一个函数，然后给这个函数嵌入了计时功能。然后你可以拍着胸脯对老板说，看吧，不用动你原来的代码，我照样拓展了它的函数功能。 
+
+	然后你的老板有对你说：“小祁，我们公司核心代码区域有一千万个func()函数，从func01()到func1kw(),按你的方案，想要拓展这一千万个函数功能，就是要执行一千万次deco()函数，这可不行呀，我心疼我的机器。” 
+
+	好了，你终于受够你老板了，准备辞职了，然后你无意间听到了装饰器这个神器，突然发现能满足你闫博士的要求了。 
+
+我们先实现一个最简陋的装饰器，不使用任何语法糖和高级语法，看看装饰器最原始的面貌：
+
+    #既不需要侵入，也不需要函数重复执行
+    import time
+    
+    def deco(func):
+        def wrapper():
+            startTime = time.time()
+            func()
+            endTime = time.time()
+            msecs = (endTime - startTime)*1000
+            print("time is %d ms" %msecs)
+        return wrapper
+    
+    @deco
+    def func():
+        print("hello")
+        time.sleep(1)
+        print("world")
+    
+    if __name__ == '__main__':
+        f = func     #这里f被赋值为func，执行f()就是执行func()
+        f()
+
+	这里的deco函数就是最原始的装饰器，它的参数是一个函数，然后返回值也是一个函数。其中作为参数的这个函数func()就在返回函数wrapper()的内部执行。然后在函数func()前面加上@deco，func()函数就相当于被注入了计时功能，现在只要调用func()，它就已经变身为“新的功能更多”的函数了。 
+
+	所以这里装饰器就像一个注入符号：有了它，拓展了原来函数的功能既不需要侵入函数内更改代码，也不需要重复执行原函数。 
+
+	然后你满足了Boss的要求后，Boss又说：“小祁，我让你拓展的函数好多可是有参数的呀，有的参数还是个数不定的那种，你的装饰器搞的定不？”然后你嘿嘿一笑，深藏功与名！
+
+    #带有参数的装饰器
+    import time
+    
+    def deco(func):
+        def wrapper(a,b):
+            startTime = time.time()
+            func(a,b)
+            endTime = time.time()
+            msecs = (endTime - startTime)*1000
+            print("time is %d ms" %msecs)
+        return wrapper
+    
+    @deco
+    def func(a,b):
+        print("hello，here is a func for add :")
+        time.sleep(1)
+        print("result is %d" %(a+b))
+    
+    if __name__ == '__main__':
+        f = func
+        f(3,4)
+
+    #带有不定参数的装饰器
+    import time
+    
+    def deco(func):
+        def wrapper(*args, **kwargs):
+            startTime = time.time()
+            func(*args, **kwargs)
+            endTime = time.time()
+            msecs = (endTime - startTime)*1000
+            print("time is %d ms" %msecs)
+        return wrapper
+    
+    @deco
+    def func(a,b):
+        print("hello，here is a func for add :")
+        time.sleep(1)
+        print("result is %d" %(a+b))
+    
+    @deco
+    def func2(a,b,c):
+        print("hello，here is a func for add :")
+        time.sleep(1)
+        print("result is %d" %(a+b+c))
+    
+    
+    if __name__ == '__main__':
+        f = func
+        func2(3,4,5)
+        f(3,4)
+
+	最后，你的老板说：“可以的，小祁，我这里一个函数需要加入很多功能，一个装饰器怕是搞不定，装饰器能支持多个嘛” 
+
+最后你就把这段代码丢给了他：
+
+    #多个装饰器
+    
+    import time
+    
+    def deco01(func):
+        def wrapper(*args, **kwargs):
+            print("this is deco01")
+            startTime = time.time()
+            func(*args, **kwargs)
+            endTime = time.time()
+            msecs = (endTime - startTime)*1000
+            print("time is %d ms" %msecs)
+            print("deco01 end here")
+        return wrapper
+    
+    def deco02(func):
+        def wrapper(*args, **kwargs):
+            print("this is deco02")
+            func(*args, **kwargs)
+    
+            print("deco02 end here")
+        return wrapper
+    
+    @deco01
+    @deco02
+    def func(a,b):
+        print("hello，here is a func for add :")
+        time.sleep(1)
+        print("result is %d" %(a+b))
+    
+    
+    if __name__ == '__main__':
+        f = func
+        f(3,4)
+    
+    '''
+    this is deco01
+    this is deco02
+    hello，here is a func for add :
+    result is 7
+    deco02 end here
+    time is 1003 ms
+    deco01 end here
+    '''
+    # 注意观察：先开始的装饰器后结束！
+
+	多个装饰器执行的顺序就是从第一个装饰器开始，执行到最后一个装饰器，再执行函数本身。
