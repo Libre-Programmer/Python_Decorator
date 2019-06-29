@@ -1,0 +1,77 @@
+{
+    "inbounds": [
+        {
+            "port": 25604,
+            "protocol": "vmess",
+            "settings": {
+                "clients": [
+                    {
+                        "id": "5d8482f8-7a75-4426-a768-a65da3504fdf",
+                        "level": 1,
+                        "alterId": 64
+                    }
+                ],
+            "detour": {        
+                "to": "dynamicPort"   
+            }
+            },
+            "streamSettings": {
+                "network": "mkcp", //服务器端的inbounds与客户端的outbounds保持一致，mkcp也可写成kcp
+                "kcpSettings": {
+                    "uplinkCapacity": 5,
+                    "downlinkCapacity": 100,
+                    "readBufferSize": 1,
+                    "writeBufferSize": 1,
+                    "congestion": true,
+                    "header": {
+                        "type": "none"
+                    }
+                }
+            }
+        },
+        {
+            "protocol": "vmess",
+            "port": "10000-20000", // 端口范围
+            "tag": "dynamicPort",       
+            "settings": {
+                "default": {
+                    "level": 1,
+                    "alterId": 32
+                }
+            },
+            "allocate": {            // 分配模式
+                "strategy": "random",  // 随机开启
+                "concurrency": 2,      // 同时开放两个端口
+                "refresh": 3// 每三分钟刷新一次
+            },
+            "streamSettings": {
+                "network": "mkcp", //服务器端的inbounds与客户端的outbounds保持一致，mkcp也可写成kcp
+                "kcpSettings": {
+                    "uplinkCapacity": 5,
+                    "downlinkCapacity": 100,
+                    "readBufferSize": 2,
+                    "writeBufferSize": 2,
+                    "congestion": true,
+                    "header": {
+                        "type": "none"
+                    }
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom",
+            "settings": {}
+        }
+    ],
+    "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "blocked"
+      }
+    ]
+  }
+}
